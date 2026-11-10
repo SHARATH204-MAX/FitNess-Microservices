@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-<div align="center">
-
-<img src="fitness-app/public/icons.svg" width="80" alt="FitNess logo"/>
-
 # 🏃‍♂️ FitNess — Fitness Activity Tracker
 
 > Track your workouts. Get AI coaching. Stay consistent.
