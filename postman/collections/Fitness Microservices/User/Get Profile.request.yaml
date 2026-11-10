@@ -1,0 +1,100 @@
+$kind: http-request
+url: 'http://localhost:8080/api/users/019cee26-e1a9-46c6-bd9c-574c6062c96a'
+method: GET
+order: 2000
+auth:
+  type: oauth2
+  credentials:
+    - key: grant_type
+      value: password_credentials
+    - key: accessTokenUrl
+      value: '{{keycloak_token_url}}'
+    - key: clientId
+      value: '{{keycloak_client_id}}'
+    - key: clientSecret
+      value: '{{keycloak_client_secret}}'
+    - key: username
+      value: '{{keycloak_username}}'
+    - key: password
+      value: '{{keycloak_password}}'
+    - key: addTokenTo
+      value: header
+    - key: scope
+      value: openid
+
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      // ── 1. Status code ────────────────────────────────────────────────────────
+      pm.test("Status code is 200", function () {
+          pm.response.to.have.status(200);
+      });
+
+      // ── 2. Response time ──────────────────────────────────────────────────────
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      // ── 3. Required fields present ────────────────────────────────────────────
+      pm.test("Response body has all required fields", function () {
+          const json = pm.response.json();
+          ["id", "email", "firstname", "lastname", "createdAt", "updateAt"].forEach(function (field) {
+              pm.expect(json, "missing field: " + field).to.have.property(field);
+          });
+      });
+
+      // ── 4. Field types and formats ────────────────────────────────────────────
+      pm.test("id is a valid UUID", function () {
+          const json = pm.response.json();
+          pm.expect(json.id).to.be.a("string")
+              .and.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      });
+
+      pm.test("email is a valid format", function () {
+          const json = pm.response.json();
+          pm.expect(json.email).to.be.a("string")
+              .and.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+      });
+
+      pm.test("createdAt and updateAt are valid date strings", function () {
+          const json = pm.response.json();
+          pm.expect(new Date(json.createdAt).toString()).to.not.equal("Invalid Date");
+          pm.expect(new Date(json.updateAt).toString()).to.not.equal("Invalid Date");
+      });
+
+      // ── 5. ID in response matches the URL ─────────────────────────────────────
+      pm.test("Response id matches the requested user ID", function () {
+          const json = pm.response.json();
+          const urlParts = pm.request.url.getPath().split("/");
+          const requestedId = urlParts[urlParts.length - 1];
+          pm.expect(json.id).to.equal(requestedId);
+      });
+
+      // ── 6. Store user data for chained requests ───────────────────────────────
+      if (pm.response.code === 200) {
+          const json = pm.response.json();
+          pm.collectionVariables.set("userId", json.id);
+          pm.collectionVariables.set("userEmail", json.email);
+      }
+
+      // ── 7. Non-existent user ID returns 404 ───────────────────────────────────
+      pm.test("Non-existent user ID returns 404 Not Found", function (done) {
+          const fakeId = "00000000-0000-0000-0000-000000000000";
+          const urlParts = pm.request.url.getPath().split("/");
+          urlParts[urlParts.length - 1] = fakeId;
+          const errorUrl = pm.request.url.protocol + "://" + pm.request.url.getHost() + urlParts.join("/");
+          const authHeader = pm.request.headers.get("Authorization");
+
+          const opts = { url: errorUrl, method: "GET", header: {} };
+          if (authHeader) { opts.header["Authorization"] = authHeader; }
+
+          pm.sendRequest(opts, function (err, res) {
+              pm.expect(err).to.be.null;
+              pm.expect(res.code).to.equal(404);
+              const body = res.json();
+              pm.expect(body).to.have.property("error", "Not Found");
+              pm.expect(body).to.have.property("message").that.includes(fakeId);
+              done();
+          });
+      });

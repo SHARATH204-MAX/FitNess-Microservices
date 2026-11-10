@@ -1,0 +1,4 @@
+$kind: http-request
+url: http://localhost:8080/api/users/019cee26-e1a9-46c6-bd9c-574c6062c96a/validate
+method: GET
+order: 3000

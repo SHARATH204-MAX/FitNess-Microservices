@@ -1,0 +1,4 @@
+$kind: collection
+variables:
+  userId: 898d85b6-9b1b-4d8f-bc7c-5a13a7575ca9
+  userEmail: test@example.com

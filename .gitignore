@@ -1,0 +1,24 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local tooling and generated files
+.idea/
+.vscode/
+.postman/
+**/target/
+**/node_modules/
+**/dist/
+**/logs/
+*.log
+*.local
+.DS_Store
+Thumbs.db
+
+# Local Postman credentials/workspace data
+postman/environments/*.environment.yaml
+postman/globals/
